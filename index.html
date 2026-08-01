@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#102e22">
+  <meta name="description" content="PGOS live plant environment monitoring from an ESP32 sensor station.">
+  <title>PGOS · Plant Intelligence</title>
+  <link rel="icon" href="assets/icon-192.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@1,6..72,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <main>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="PGOS home">
+        <span class="brand-mark">P</span>
+        <span><strong>PGOS</strong><small>Plant Growth Optimization System</small></span>
+      </a>
+      <div class="top-actions">
+        <button class="icon-button" id="refreshButton" type="button" title="Refresh data" aria-label="Refresh data">↻</button>
+        <div class="status-chip waiting" id="statusChip"><i></i><span>Connecting</span></div>
+      </div>
+    </header>
+
+    <section class="hero" id="top">
+      <div>
+        <p class="kicker">LIVE PLANT ENVIRONMENT</p>
+        <h1>Your growing space,<br><em>measured clearly.</em></h1>
+      </div>
+      <div class="hero-side">
+        <p>Temperature, light and air conditions from your ESP32—available here wherever you have Internet.</p>
+        <div class="last-update"><span>LAST READING</span><strong id="lastReading">Waiting for the sensor…</strong></div>
+      </div>
+    </section>
+
+    <div class="alert" id="errorAlert" hidden>
+      <div><strong>Cloud connection interrupted</strong><span id="errorText">Unable to load readings.</span></div>
+      <button id="retryButton" type="button">Try again</button>
+    </div>
+
+    <section class="metrics" aria-label="Current sensor readings">
+      <article class="metric primary">
+        <div class="metric-head"><span class="metric-icon temperature">T</span><p>TEMPERATURE</p></div>
+        <div class="metric-reading"><strong id="temperatureValue">—</strong><span>°C</span></div>
+        <div class="metric-foot"><span id="temperatureState">Waiting for data</span><i id="temperatureDot"></i></div>
+      </article>
+      <article class="metric light-card">
+        <div class="metric-head"><span class="metric-icon sunlight">L</span><p>AVAILABLE LIGHT</p></div>
+        <div class="metric-reading"><strong id="lightValue">—</strong><span>%</span></div>
+        <div class="metric-foot"><span id="lightState">Waiting for data</span><i id="lightDot"></i></div>
+      </article>
+      <article class="metric air-card">
+        <div class="metric-head"><span class="metric-icon air">A</span><p>AIR SENSOR</p></div>
+        <div class="metric-reading"><strong id="gasValue">—</strong><span>%</span></div>
+        <div class="metric-foot"><span id="gasState">Waiting for data</span><i id="gasDot"></i></div>
+      </article>
+      <article class="metric soil-card">
+        <div class="metric-head"><span class="metric-icon soil">S</span><p>SOIL MOISTURE</p></div>
+        <div class="metric-reading"><strong id="soilValue">—</strong><span id="soilUnit"></span></div>
+        <div class="metric-foot"><span id="soilState">Probe not installed</span><i></i></div>
+      </article>
+    </section>
+
+    <section class="analytics">
+      <article class="chart-panel panel">
+        <div class="panel-heading">
+          <div><p class="kicker">SENSOR HISTORY</p><h2>Environmental trend</h2></div>
+          <div class="range-picker" role="group" aria-label="Chart time range">
+            <button type="button" data-range="60">5 min</button>
+            <button type="button" data-range="120">10 min</button>
+            <button type="button" data-range="200" class="active">All</button>
+          </div>
+        </div>
+        <div class="chart-legend" aria-label="Chart legend">
+          <button type="button" class="legend-item active" data-series="temperature"><i class="legend-temperature"></i>Temperature</button>
+          <button type="button" class="legend-item active" data-series="light"><i class="legend-light"></i>Light</button>
+          <button type="button" class="legend-item active" data-series="gas"><i class="legend-gas"></i>Air</button>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="historyChart" role="img" aria-label="Temperature, light and air sensor history"></canvas>
+          <div class="chart-empty" id="chartEmpty">History will appear when readings arrive.</div>
+        </div>
+        <div class="chart-axis"><span id="chartStart">Earlier</span><span id="chartEnd">Latest</span></div>
+      </article>
+
+      <aside class="summary-panel panel">
+        <p class="kicker">LIVE STATION</p>
+        <h2 id="deviceName">pgos-esp32-01</h2>
+        <div class="station-orbit"><div><span id="stationStatus">CONNECTING</span><strong id="rssiValue">—</strong><small>Wi‑Fi dBm</small></div></div>
+        <dl>
+          <div><dt>Data interval</dt><dd>5 seconds</dd></div>
+          <div><dt>Samples shown</dt><dd id="sampleCount">0</dd></div>
+          <div><dt>Device uptime</dt><dd id="uptimeValue">—</dd></div>
+          <div><dt>Soil input</dt><dd id="soilConnection">Not installed</dd></div>
+        </dl>
+        <a class="local-button" href="http://192.168.4.1" target="_blank" rel="noreferrer">Open nearby ESP32 <span>↗</span></a>
+        <small>Nearby dashboard works while connected to ESP32-PGOS Wi‑Fi.</small>
+      </aside>
+    </section>
+
+    <section class="statistics panel">
+      <div class="panel-heading">
+        <div><p class="kicker">MEASURED WINDOW</p><h2>Signal summary</h2></div>
+        <button class="text-button" id="exportButton" type="button">Download CSV</button>
+      </div>
+      <div class="stat-grid">
+        <div><span>Temperature range</span><strong id="temperatureRange">—</strong><small>minimum — maximum</small></div>
+        <div><span>Average light</span><strong id="lightAverage">—</strong><small>across shown readings</small></div>
+        <div><span>Peak air signal</span><strong id="gasPeak">—</strong><small>highest detected level</small></div>
+        <div><span>Wi‑Fi stability</span><strong id="wifiAverage">—</strong><small>average signal strength</small></div>
+      </div>
+    </section>
+
+    <section class="readings panel">
+      <div class="panel-heading">
+        <div><p class="kicker">RECENT DATA</p><h2>Reading ledger</h2></div>
+        <span class="auto-refresh">AUTO REFRESH · 5S</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Time</th><th>Temperature</th><th>Light</th><th>Air</th><th>Wi‑Fi</th></tr></thead>
+          <tbody id="readingRows"><tr><td colspan="5" class="table-empty">Waiting for ESP32 readings…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="connect-panel">
+      <div>
+        <p class="kicker">ONE SYSTEM · TWO CONNECTIONS</p>
+        <h2>Near the plant or across the world.</h2>
+        <p>The ESP32 keeps a private nearby dashboard and also sends readings to this worldwide PGOS view. Your school network does not need inbound ports or router changes.</p>
+      </div>
+      <div class="connect-steps">
+        <div><span>01</span><p><strong>Nearby control</strong>Connect to ESP32-PGOS and use the local address.</p></div>
+        <div><span>02</span><p><strong>Worldwide monitoring</strong>Open this page from any Internet connection.</p></div>
+        <div><span>03</span><p><strong>Install everywhere</strong>Use the Android app, Windows app, or install this site.</p></div>
+      </div>
+      <button class="install-button" id="installButton" type="button">Install this web app</button>
+    </section>
+
+    <footer>
+      <div class="brand mini"><span class="brand-mark">P</span><span><strong>PGOS</strong><small>Plant intelligence</small></span></div>
+      <p>Plant Growth Optimization System</p>
+      <span>ESP32 · LIVE CLOUD MONITOR</span>
+    </footer>
+  </main>
+  <script src="app.js" defer></script>
+</body>
+</html>
